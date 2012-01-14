@@ -64,7 +64,7 @@ while searchDir != "/":
 	searchDir = os.path.split(searchDir)[0]
 
 # re-use texdoc's configuration variables for viewing TeX's output:
-viewCommand = "kpdf %r"
+viewCommand = "gv -watch %r"
 texdocViewCommand = os.environ.get("TEXDOCVIEW_pdf", None)
 if texdocViewCommand:
 	viewCommand = texdocViewCommand.rstrip("&").replace("%s", "%r")
@@ -72,12 +72,16 @@ if texdocViewCommand:
 if os.path.exists(templateFilename):
 	template = file(templateFilename).read()
 else:
-	template = r"""\documentclass{article}
-
+	template = r"""\documentclass[a4paper,10pt]{article}
+\usepackage[utf8x]{inputenc}
+\usepackage{pgfplots}
+\usepackage{pgfplotstable}
+\usepackage{pgf}
 \usepackage{tikz,nicefrac,amsmath,pifont}
 \usetikzlibrary{arrows,snakes,backgrounds,patterns,matrix,shapes,fit,calc,shadows,plotmarks}
 
 \usepackage[graphics,tightpage,active]{preview}
+\usepackage{tabularx}
 \PreviewEnvironment{tikzpicture}
 \newlength{\imagewidth}
 \newlength{\imagescale}
@@ -110,12 +114,13 @@ while True:
 	try:
 		mtime = os.path.getmtime(tikzName)
 		if mtime > previous:
+			time.sleep(1)
 			out = None
 			print "tikz2pdf: calling pdflatex..."
 			if not options.verbose:
 				out = tempfile.TemporaryFile()
 			ec = subprocess.call(
-				["pdflatex", "-halt-on-error", texName], stdout = out)
+				["pdflatex", "-shell-escape", "-halt-on-error", texName], stdout = out)
 			if ec:
 				if out:
 					out.seek(0)
