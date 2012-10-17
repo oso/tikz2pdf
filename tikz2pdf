@@ -141,6 +141,8 @@ while True:
 	except KeyboardInterrupt:
 		verboseUnlink(pdfName)
 		break
+	except OSError:
+		pass
 
 verboseUnlink(texName)
 for temp in glob.glob("tikz2pdf_temp.*"):
