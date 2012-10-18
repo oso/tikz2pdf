@@ -45,9 +45,17 @@ op.add_option("-o", "--once", action = "store_true",
 op.add_option("-s", "--view", action = "store_true",
 			  dest = "view", default = False,
 			  help = "start viewer after first successful compilation")
+op.add_option("-f", "--file", action = "store",
+			  dest = "output_file", default = None,
+			  help = "ouput file name")
 
 options, args = op.parse_args()
 tikzName, = args # exactly one filename expected
+
+if options.output_file is None:
+	output_file = os.path.splitext(tikzName)[0] + ".pdf"
+else:
+	output_file = options.output_file
 
 basename = "tikz2pdf_temp"
 texName = basename + ".tex"
@@ -77,6 +85,7 @@ else:
 \usepackage{pgfplots}
 \usepackage{pgfplotstable}
 \usepackage{pgf}
+
 \usepackage{tikz,nicefrac,amsmath,pifont}
 \usetikzlibrary{arrows,snakes,backgrounds,patterns,matrix,shapes,fit,calc,shadows,plotmarks}
 
@@ -95,7 +104,14 @@ else:
 	sys.stderr.write("INFO: '%s' did not exist, saving default template - please configure!\n" % templateFilename)
 	file(templateFilename, "w").write(template)
 
-file(texName, "w").write(template % tikzName)
+f = tempfile.NamedTemporaryFile(prefix = os.getcwd() + "/", suffix=".tex")
+f.seek(0)
+f.write(template % tikzName)
+f.flush()
+texName = f.name
+pdfName = os.path.splitext(texName)[0] + ".pdf"
+print texName
+#file(texName, "w").write(template % tikzName)
 
 def verboseUnlink(filename):
 	# FIXME: check mtime
@@ -114,7 +130,6 @@ while True:
 	try:
 		mtime = os.path.getmtime(tikzName)
 		if mtime > previous:
-			time.sleep(1)
 			out = None
 			print "tikz2pdf: calling pdflatex..."
 			if not options.verbose:
@@ -136,6 +151,7 @@ while True:
 
 			previous = mtime
 			if options.once:
+				os.rename(pdfName, output_file)
 				break
 		time.sleep(1)
 	except KeyboardInterrupt:
@@ -144,9 +160,7 @@ while True:
 	except OSError:
 		pass
 
-verboseUnlink(texName)
-for temp in glob.glob("tikz2pdf_temp.*"):
-	if temp != pdfName:
-		verboseUnlink(temp)
-# for ext in (".aux", ".log"):
-# 	verboseUnlink(basename + ext)
+f.close()
+
+for temp in glob.glob(os.path.splitext(texName)[0] + ".*"):
+	verboseUnlink(temp)
