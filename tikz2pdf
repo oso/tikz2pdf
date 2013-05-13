@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 #
+# vim:ts=4 sw=4 expandtab
+#
 # Copyright (c) 2007, Hans Meine <hans_meine@gmx.net>
 #  All rights reserved.
 #
@@ -34,53 +36,17 @@
 # ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-import sys, os.path, subprocess, glob, time, optparse, tempfile
+import sys
+import os
+import subprocess
+import glob
+import time
+import optparse
+import tempfile
 
-op = optparse.OptionParser(usage="%prog [options] foo.tikz")
-op.add_option("-v", "--verbose", action = "store_true", default = False,
-			  dest = "verbose", help = "verbose output")
-op.add_option("-o", "--once", action = "store_true",
-			  dest = "once", default = False,
-			  help = "only convert once, then clean up temporary files and quit")
-op.add_option("-s", "--view", action = "store_true",
-			  dest = "view", default = False,
-			  help = "start viewer after first successful compilation")
-op.add_option("-f", "--file", action = "store",
-			  dest = "output_file", default = None,
-			  help = "ouput file name")
-
-options, args = op.parse_args()
-tikzName, = args # exactly one filename expected
-
-if options.output_file is None:
-	output_file = os.path.splitext(tikzName)[0] + ".pdf"
-else:
-	output_file = options.output_file
-
-basename = "tikz2pdf_temp"
-texName = basename + ".tex"
-pdfName = basename + ".pdf"
-
-templateFilename = os.path.expanduser("~/.tikz2pdf.tex")
-searchDir = os.getcwd()
-while searchDir != "/":
-	candidate = os.path.join(searchDir, ".tikz2pdf.tex")
-	if os.path.exists(candidate):
-		templateFilename = candidate
-		sys.stdout.write("Using template %r.\n" % candidate)
-		break
-	searchDir = os.path.split(searchDir)[0]
-
-# re-use texdoc's configuration variables for viewing TeX's output:
-viewCommand = "gv -watch %r"
-texdocViewCommand = os.environ.get("TEXDOCVIEW_pdf", None)
-if texdocViewCommand:
-	viewCommand = texdocViewCommand.rstrip("&").replace("%s", "%r")
-
-if os.path.exists(templateFilename):
-	template = file(templateFilename).read()
-else:
-	template = r"""\documentclass[a4paper,10pt]{article}
+DEFAULT_PDFVIEWER_CMD = "zathura"
+DEFAULT_TEMPLATE_FILE = os.path.expanduser("~/.tikz2pdf.tex")
+DEFAULT_TEMPLATE = r"""\documentclass[a4paper,10pt]{article}
 \usepackage[utf8x]{inputenc}
 \usepackage{pgfplots}
 \usepackage{pgfplotstable}
@@ -101,66 +67,145 @@ else:
 
 \end{document}
 """
-	sys.stderr.write("INFO: '%s' did not exist, saving default template - please configure!\n" % templateFilename)
-	file(templateFilename, "w").write(template)
 
-f = tempfile.NamedTemporaryFile(prefix = os.getcwd() + "/", suffix=".tex")
-f.seek(0)
-f.write(template % tikzName)
-f.flush()
-texName = f.name
-pdfName = os.path.splitext(texName)[0] + ".pdf"
-print texName
-#file(texName, "w").write(template % tikzName)
+verbose = False
+tmpfile = None
 
-def verboseUnlink(filename):
-	# FIXME: check mtime
-	if options.verbose:
-		print "cleaning up %r..." % filename
-	try:
-		os.unlink(filename)
-	except OSError, e:
-		if e.errno != 2:
-			raise e
+def log_error(msg):
+    sys.stderr.write(msg)
 
-viewer = None
+def log_info(msg):
+    if verbose is False:
+        return
 
-previous = 0
-while True:
-	try:
-		mtime = os.path.getmtime(tikzName)
-		if mtime > previous:
-			out = None
-			print "tikz2pdf: calling pdflatex..."
-			if not options.verbose:
-				out = tempfile.TemporaryFile()
-			ec = subprocess.call(
-				["pdflatex", "-shell-escape", "-halt-on-error", texName], stdout = out)
-			if ec:
-				if out:
-					out.seek(0)
-					sys.stdout.write(out.read())
-				print "tikz2pdf: ERROR generating %r with pdflatex." % pdfName
-			else:
-				print "tikz2pdf: Successfully generated %r." % pdfName
-				if options.view and viewer is None:
-					print "tikz2pdf: starting viewer..."
-					viewer = subprocess.Popen(viewCommand % pdfName, shell = True)
-			if out:
-				out.close()
+    sys.stderr.write(msg)
 
-			previous = mtime
-			if options.once:
-				os.rename(pdfName, output_file)
-				break
-		time.sleep(1)
-	except KeyboardInterrupt:
-		verboseUnlink(pdfName)
-		break
-	except OSError:
-		pass
+def find_template():
+    current = os.getcwd()
+    while current != "/":
+	    candidate = os.path.join(current, ".tikz2pdf.tex")
+        if os.path.isfile(candidate):
+            log_info("Using template %s\n" % candidate)
+            return candidate
 
-f.close()
+        current = os.path.split(current)[0]
 
-for temp in glob.glob(os.path.splitext(texName)[0] + ".*"):
-	verboseUnlink(temp)
+    return None
+
+def remove_tempfile():
+    if tmpfile is None:
+        return
+
+    for temp in glob.glob(os.path.splitext(tmpfile.name)[0] + ".*"):
+        os.unlink(temp)
+
+def generate_pdf(template, tikzfile, output_file):
+    global tmpfile
+    global verbose
+
+    tmpfile = tempfile.NamedTemporaryFile(prefix = os.getcwd() + "/tikz2pdf_",
+                                          suffix=".tex")
+    tmpfile.write(template % tikzfile)
+    tmpfile.flush()
+
+    texname = tmpfile.name
+    pdfname = os.path.splitext(texname)[0] + ".pdf"
+
+    if verbose is True:
+        out = sys.stderr
+    else:
+        out = subprocess.PIPE
+
+    rc = subprocess.call(["pdflatex", "-shell-escape", "-halt-on-error",
+                          texname], stdout = out, stderr = out)
+    if rc:
+        log_error("ERROR generating %s with pdflatex (rc = %d)\n"
+                  % (output_file, rc))
+        tmpfile.close()
+        remove_tempfile()
+        return rc
+
+    tmpfile.close()
+
+    os.rename(pdfname, output_file)
+    remove_tempfile()
+
+    log_info("Successfully generated %s\n" % output_file)
+
+    return 0
+
+def start_pdfviewer(output_file):
+    subprocess.Popen(DEFAULT_PDFVIEWER_CMD +  "%s" % output_file,
+                     shell = True)
+
+if __name__ == "__main__":
+    op = optparse.OptionParser(usage="%prog [options] foo.tikz")
+    op.add_option("-v", "--verbose", action = "store_true",
+                  dest = "verbose", default = False,
+                  help = "verbose output")
+    op.add_option("-o", "--once", action = "store_true",
+                  dest = "once", default = False,
+                  help = "only convert once, then clean up temporary files and quit")
+    op.add_option("-s", "--view", action = "store_true",
+                  dest = "view", default = False,
+                  help = "start viewer after first successful compilation")
+    op.add_option("-f", "--file", action = "store",
+                  dest = "output_file", default = None,
+                  help = "ouput file name")
+
+    options, args = op.parse_args()
+    tikzfile, = args
+
+    verbose = options.verbose
+
+    if not os.path.isfile(tikzfile):
+        log_error("Invalid file (%s)!\n" % tikzfile)
+        exit(1)
+
+    tikzfile = os.path.realpath(tikzfile)
+    directory = os.path.dirname(tikzfile) + os.sep
+
+    if options.output_file is None:
+	    options.output_file = os.path.splitext(tikzfile)[0] + ".pdf"
+
+    options.output_file = os.path.realpath(options.output_file)
+
+    os.chdir(directory)
+
+    template_file = find_template()
+    if template_file is not None:
+	    template = file(template_file).read()
+    elif os.path.isfile(DEFAULT_TEMPLATE_FILE):
+	    template = file(templateFilename).read()
+    else:
+        template = DEFAULT_TEMPLATE
+
+    if options.once is True:
+        rc = generate_pdf(template, tikzfile, options.output_file)
+        if rc == 0 and options.view is True:
+            start_pdfviewer(options.output_file)
+    else:
+		previous_time = None
+        try:
+            while True:
+                try:
+                    current_time = os.path.getmtime(tikzfile)
+                except OSError:
+                    time.sleep(1)
+                    continue
+
+                if current_time == previous_time:
+                    time.sleep(1)
+                    continue
+
+                rc = generate_pdf(template, tikzfile, options.output_file)
+                if rc == 0 and options.view is True:
+                    start_pdfviewer(options.output_file)
+                    options.view = False
+
+                previous_time = current_time
+        except KeyboardInterrupt:
+            remove_tempfile()
+            pass
+
+    exit(rc)
