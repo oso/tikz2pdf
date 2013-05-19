@@ -84,7 +84,7 @@ def log_info(msg):
 def find_template():
     current = os.getcwd()
     while current != "/":
-	    candidate = os.path.join(current, ".tikz2pdf.tex")
+        candidate = os.path.join(current, ".tikz2pdf.tex")
         if os.path.isfile(candidate):
             log_info("Using template %s\n" % candidate)
             return candidate
@@ -158,7 +158,7 @@ if __name__ == "__main__":
                   help = "ouput file name")
 
     options, args = op.parse_args()
-    tikzfile, = args
+    tikzfile = args[0]
 
     verbose = options.verbose
 
@@ -189,7 +189,7 @@ if __name__ == "__main__":
         if rc == 0 and options.view is True:
             start_pdfviewer(options.output_file)
     else:
-		previous_time = None
+        previous_time = None
         try:
             while True:
                 try:
