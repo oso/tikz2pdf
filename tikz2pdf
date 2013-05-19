@@ -145,7 +145,10 @@ if __name__ == "__main__":
                   help = "verbose output")
     op.add_option("-o", "--once", action = "store_true",
                   dest = "once", default = False,
-                  help = "only convert once, then clean up temporary files and quit")
+                  help = "only convert once and exit (obsolete)")
+    op.add_option("-w", "--watch", action = "store_true",
+                  dest = "watch", default = False,
+                  help = "watch tikz file and procude a new pdf if it has changed")
     op.add_option("-s", "--view", action = "store_true",
                   dest = "view", default = False,
                   help = "start viewer after first successful compilation")
@@ -180,7 +183,7 @@ if __name__ == "__main__":
     else:
         template = DEFAULT_TEMPLATE
 
-    if options.once is True:
+    if options.watch is False or options.once is True:
         rc = generate_pdf(template, tikzfile, options.output_file)
         if rc == 0 and options.view is True:
             start_pdfviewer(options.output_file)
