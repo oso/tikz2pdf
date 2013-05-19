@@ -135,7 +135,7 @@ def generate_pdf(template, tikzfile, output_file):
     return 0
 
 def start_pdfviewer(output_file):
-    subprocess.Popen(DEFAULT_PDFVIEWER_CMD +  "%s" % output_file,
+    subprocess.Popen(DEFAULT_PDFVIEWER_CMD +  " %s" % output_file,
                      shell = True)
 
 if __name__ == "__main__":
