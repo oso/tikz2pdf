@@ -1,0 +1,39 @@
+tikz2pdf
+========
+
+This small program allows to translate a tikz file into pdf.
+It is an adaptation of the original script written by Hans Meine.
+
+Licence
+-------
+
+Copyright (c) 2013, Olivier Sobrie <olivier@sobrie.be>
+Copyright (c) 2007, Hans Meine <hans_meine@gmx.net>
+
+This is licensed according to the new BSD license.
+
+usage
+-----
+
+tikz2pdf [-f file] [-o] [-s] [-v] file.tikz
+        -f file : output file (by default it is the filename with
+                  pdf as suffix)
+        -o      : run the pdf conversion only once (obsolete)
+	-w	: watch tikz file and procude a new pdf if it has
+	          changed
+        -s      : start viewer once pdf output generated
+        -v      : verbose mode
+
+example
+-------
+
+To generate a pdf from the tikz image, just type:
+
+	tikz2pdf myfig.tikz
+
+The resulting pdf will be saved as myfig.pdf.
+
+If you want to have the pdf updated once the tikz file is modified, you
+can use this command:
+
+	tikz2pdf -ws myfig.tikz
