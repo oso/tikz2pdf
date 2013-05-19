@@ -1,0 +1,29 @@
+.TH tikz2pdf 1 "May 19, 2013"
+.SH NAME
+tikz2pdf \- a simple tool allowing to convert a tikz file to a pdf
+.SH SYNOPSIS
+.B tikz2pdf
+[options] FILE
+.SH DESCRIPTION
+.B tikz2pdf
+A tool that allow to convert a tikz file into a pdf
+.SH OPTIONS
+.TP
+\fB\-v\fR, \fB\-\-verbose\fR
+show more output during processing
+.PP
+.TP
+\fB\-f\fR, \fB\-\-file=FILE\fR
+output filename (by default it is the filename with pdf as suffix)
+.PP
+.TP
+\fB\-o\fR, \fB\-\-once\fR
+run the pdf conversion only once (obsolete)
+.PP
+.TP
+\fB\-s\fR, \fB\-\-start\fR
+start viewer once pdf output generated
+.PP
+.TP
+\fB\-w\fR, \fB\-\-watch\fR
+watch tikz file and procude a new pdf if it has changed
