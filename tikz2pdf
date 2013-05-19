@@ -158,12 +158,16 @@ if __name__ == "__main__":
                   help = "ouput file name")
 
     options, args = op.parse_args()
-    tikzfile = args[0]
 
     verbose = options.verbose
 
+    if len(args) == 0:
+        log_error("No input file specified!\n")
+        exit(1)
+
+    tikzfile = os.path.realpath(args[0])
     if not os.path.isfile(tikzfile):
-        log_error("Invalid file (%s)!\n" % tikzfile)
+        log_error("Invalid file! (%s)\n" % tikzfile)
         exit(1)
 
     tikzfile = os.path.realpath(tikzfile)
