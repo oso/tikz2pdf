@@ -170,7 +170,6 @@ if __name__ == "__main__":
         log_error("Invalid file! (%s)\n" % tikzfile)
         exit(1)
 
-    tikzfile = os.path.realpath(tikzfile)
     directory = os.path.dirname(tikzfile) + os.sep
 
     if options.output_file is None:
