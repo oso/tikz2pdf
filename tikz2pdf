@@ -115,13 +115,19 @@ def generate_pdf(template, tikzfile, output_file):
     if verbose is True:
         out = sys.stderr
     else:
-        out = subprocess.PIPE
+        out = tempfile.TemporaryFile()
 
     rc = subprocess.call(["pdflatex", "-shell-escape", "-halt-on-error",
                           texname], stdout = out, stderr = out)
     if rc:
         log_error("ERROR generating %s with pdflatex (rc = %d)\n"
                   % (output_file, rc))
+
+        if out is not sys.stderr:
+            out.seek(0)
+            sys.stderr.write(out.read())
+            out.close()
+
         tmpfile.close()
         remove_tempfile()
         return rc
