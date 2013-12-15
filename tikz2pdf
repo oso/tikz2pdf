@@ -43,6 +43,7 @@ import subprocess
 import glob
 import time
 import optparse
+import subprocess
 import tempfile
 
 DEFAULT_PDFVIEWER_CMD = "zathura"
@@ -81,6 +82,23 @@ def log_info(msg):
 
     sys.stderr.write(msg)
 
+def which(program):
+    def is_exe(fpath):
+        return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+
+    fpath, fname = os.path.split(program)
+    if fpath:
+        if is_exe(program):
+            return program
+    else:
+        for path in os.environ["PATH"].split(os.pathsep):
+            path = path.strip('"')
+            exe_file = os.path.join(path, program)
+            if is_exe(exe_file):
+                return exe_file
+
+    return None
+
 def find_template():
     current = os.getcwd()
     while current != "/":
@@ -100,7 +118,7 @@ def remove_tempfile():
     for temp in glob.glob(os.path.splitext(tmpfile.name)[0] + ".*"):
         os.unlink(temp)
 
-def generate_pdf(template, tikzfile, output_file):
+def generate_pdf(pdfcmd, template, tikzfile, output_file):
     global tmpfile
     global verbose
 
@@ -117,7 +135,7 @@ def generate_pdf(template, tikzfile, output_file):
     else:
         out = tempfile.TemporaryFile()
 
-    rc = subprocess.call(["pdflatex", "-shell-escape", "-halt-on-error",
+    rc = subprocess.call([pdfcmd, "-shell-escape", "-halt-on-error",
                           texname], stdout = out, stderr = out)
     if rc:
         log_error("ERROR generating %s with pdflatex (rc = %d)\n"
@@ -185,6 +203,16 @@ if __name__ == "__main__":
 
     os.chdir(directory)
 
+    if which('lualatex') is not None:
+        pdfcmd = 'lualatex'
+    elif which('pdflatex') is not None:
+        pdfcmd = 'pdflatex'
+    else:
+        log_error("Neither 'lualtex' nor 'pdflatex' have been found")
+        exit(1)
+
+    log_info("Using '%s'\n" % pdfcmd)
+
     template_file = find_template()
     if template_file is not None:
 	    template = file(template_file).read()
@@ -194,7 +222,7 @@ if __name__ == "__main__":
         template = DEFAULT_TEMPLATE
 
     if options.watch is False or options.once is True:
-        rc = generate_pdf(template, tikzfile, options.output_file)
+        rc = generate_pdf(pdfcmd, template, tikzfile, options.output_file)
         if rc == 0 and options.view is True:
             start_pdfviewer(options.output_file)
     else:
@@ -211,7 +239,8 @@ if __name__ == "__main__":
                     time.sleep(1)
                     continue
 
-                rc = generate_pdf(template, tikzfile, options.output_file)
+                rc = generate_pdf(pdfcmd, template, tikzfile,
+                                  options.output_file)
                 if rc == 0 and options.view is True:
                     start_pdfviewer(options.output_file)
                     options.view = False
