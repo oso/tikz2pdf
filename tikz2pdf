@@ -52,10 +52,10 @@ DEFAULT_TEMPLATE = r"""\documentclass[a4paper,10pt]{article}
 \usepackage{pgfplots}
 \usepackage{pgfplotstable}
 \usepackage{pgf}
-
+\usepackage{gnuplot-lua-tikz}
+\pgfplotsset{compat=newest}
 \usepackage{tikz,nicefrac,amsmath,pifont}
-\usetikzlibrary{arrows,snakes,backgrounds,patterns,matrix,shapes,fit,calc,shadows,plotmarks}
-
+\usetikzlibrary{arrows,snakes,backgrounds,patterns,matrix,shapes,fit,calc,shadows,plotmarks,decorations.pathmorphing,plotmarks,external}
 \usepackage[graphics,tightpage,active]{preview}
 \usepackage{tabularx}
 \PreviewEnvironment{tikzpicture}
