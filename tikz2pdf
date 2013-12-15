@@ -124,7 +124,8 @@ def generate_pdf(pdfcmd, template, tikzfile, output_file):
 
     tmpfile = tempfile.NamedTemporaryFile(prefix = os.getcwd() + "/tikz2pdf_",
                                           suffix=".tex")
-    tmpfile.write(template % tikzfile)
+    buf = template % tikzfile
+    tmpfile.write(buf.encode('utf-8'))
     tmpfile.flush()
 
     texname = tmpfile.name
@@ -215,9 +216,9 @@ if __name__ == "__main__":
 
     template_file = find_template()
     if template_file is not None:
-	    template = file(template_file).read()
+	    template = open(template_file, 'r').read()
     elif os.path.isfile(DEFAULT_TEMPLATE_FILE):
-	    template = file(templateFilename).read()
+	    template = open(templateFilename, 'r').read()
     else:
         template = DEFAULT_TEMPLATE
 
