@@ -144,7 +144,7 @@ def generate_pdf(pdfcmd, template, tikzfile, output_file):
 
         if out is not sys.stderr:
             out.seek(0)
-            sys.stderr.write(out.read())
+            sys.stderr.write(out.read().decode("utf-8"))
             out.close()
 
         tmpfile.close()
