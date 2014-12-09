@@ -54,9 +54,11 @@ DEFAULT_TEMPLATE = r"""\documentclass[a4paper,10pt]{article}
 \usepackage{pgfplotstable}
 \usepackage{pgf}
 \usepackage{gnuplot-lua-tikz}
+\usepackage{makecell}
 \pgfplotsset{compat=newest}
 \usepackage{tikz,nicefrac,amsmath,pifont}
-\usetikzlibrary{arrows,snakes,backgrounds,patterns,matrix,shapes,fit,calc,shadows,plotmarks,decorations.pathmorphing,plotmarks,external}
+\usetikzlibrary{arrows,snakes,backgrounds,patterns,matrix,shapes,fit,calc,shadows,plotmarks,decorations.pathmorphing,plotmarks,external,positioning}
+\usepgfplotslibrary{groupplots}
 \usepackage[graphics,tightpage,active]{preview}
 \usepackage{tabularx}
 \PreviewEnvironment{tikzpicture}
