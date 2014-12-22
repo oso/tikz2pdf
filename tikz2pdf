@@ -220,7 +220,7 @@ if __name__ == "__main__":
     if template_file is not None:
 	    template = open(template_file, 'r').read()
     elif os.path.isfile(DEFAULT_TEMPLATE_FILE):
-	    template = open(templateFilename, 'r').read()
+	    template = open(DEFAULT_TEMPLATE_FILE, 'r').read()
     else:
         template = DEFAULT_TEMPLATE
 
