@@ -74,6 +74,7 @@ DEFAULT_TEMPLATE = r"""\documentclass[a4paper,10pt]{article}
 
 verbose = False
 tmpfile = None
+dependencies = {}
 
 def log_error(msg):
     sys.stderr.write(msg)
@@ -120,6 +121,39 @@ def remove_tempfile():
     for temp in glob.glob(os.path.splitext(tmpfile.name)[0] + ".*"):
         os.unlink(temp)
 
+def get_updated_dependencies():
+    global dependencies
+
+    l = []
+    for fname, prev_time in dependencies.items():
+        try:
+            current_time = os.path.getmtime(fname)
+        except:
+            continue
+
+        if current_time != prev_time:
+            dependencies[fname] = current_time
+            l.append(fname)
+
+    return l
+
+def update_dependencies(tmpfile):
+    global dependencies
+
+    try:
+        f = open(os.path.splitext(tmpfile.name)[0] + ".fls")
+    except:
+        return
+
+    dependencies = {}
+    for line in f:
+        line = line.split()
+        if line[0] == "INPUT":
+            dependencies[line[1]] = os.path.getmtime(line[1])
+
+    f.close()
+    pass
+
 def generate_pdf(pdfcmd, template, tikzfile, output_file):
     global tmpfile
     global verbose
@@ -139,7 +173,7 @@ def generate_pdf(pdfcmd, template, tikzfile, output_file):
         out = tempfile.TemporaryFile()
 
     rc = subprocess.call([pdfcmd, "-shell-escape", "-halt-on-error",
-                          texname], stdout = out, stderr = out)
+                          "-recorder", texname], stdout = out, stderr = out)
     if rc:
         log_error("ERROR generating %s with pdflatex (rc = %d)\n"
                   % (output_file, rc))
@@ -152,6 +186,8 @@ def generate_pdf(pdfcmd, template, tikzfile, output_file):
         tmpfile.close()
         remove_tempfile()
         return rc
+
+    update_dependencies(tmpfile)
 
     tmpfile.close()
 
@@ -238,7 +274,8 @@ if __name__ == "__main__":
                     time.sleep(1)
                     continue
 
-                if current_time == previous_time:
+                nupdated_depends = len(get_updated_dependencies())
+                if current_time == previous_time and nupdated_depends == 0:
                     time.sleep(1)
                     continue
 
