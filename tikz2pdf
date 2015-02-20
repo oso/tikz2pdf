@@ -72,6 +72,7 @@ DEFAULT_TEMPLATE = r"""\documentclass[a4paper,10pt]{article}
 \end{document}
 """
 
+quiet = False
 verbose = False
 tmpfile = None
 dependencies = {}
@@ -80,6 +81,12 @@ def log_error(msg):
     sys.stderr.write(msg)
 
 def log_info(msg):
+    if quiet is True:
+        return
+
+    sys.stderr.write(msg)
+
+def log_verbose(msg):
     if verbose is False:
         return
 
@@ -107,7 +114,7 @@ def find_template():
     while current != "/":
         candidate = os.path.join(current, ".tikz2pdf.tex")
         if os.path.isfile(candidate):
-            log_info("Using template %s\n" % candidate)
+            log_verbose("Using template %s\n" % candidate)
             return candidate
 
         current = os.path.split(current)[0]
@@ -175,7 +182,7 @@ def generate_pdf(pdfcmd, template, tikzfile, output_file):
     rc = subprocess.call([pdfcmd, "-shell-escape", "-halt-on-error",
                           "-recorder", texname], stdout = out, stderr = out)
     if rc:
-        log_error("ERROR generating %s with pdflatex (rc = %d)\n"
+        log_error("\nERROR generating %s with pdflatex (rc = %d)\n"
                   % (output_file, rc))
 
         if out is not sys.stderr:
@@ -194,7 +201,7 @@ def generate_pdf(pdfcmd, template, tikzfile, output_file):
     os.rename(pdfname, output_file)
     remove_tempfile()
 
-    log_info("Successfully generated %s\n" % output_file)
+    log_verbose("Successfully generated %s\n" % output_file)
 
     return 0
 
@@ -250,7 +257,7 @@ if __name__ == "__main__":
         log_error("Neither 'lualtex' nor 'pdflatex' have been found")
         exit(1)
 
-    log_info("Using '%s'\n" % pdfcmd)
+    log_verbose("Using '%s'\n" % pdfcmd)
 
     template_file = find_template()
     if template_file is not None:
@@ -267,6 +274,7 @@ if __name__ == "__main__":
     else:
         previous_time = None
         try:
+            i = 0
             while True:
                 try:
                     current_time = os.path.getmtime(tikzfile)
@@ -279,13 +287,25 @@ if __name__ == "__main__":
                     time.sleep(1)
                     continue
 
+                previous_time = current_time
+
+                i += 1
+                msginfo = "Regenerating %s (#%d)..." \
+                          % (options.output_file, i)
+                if verbose is True:
+                    msginfo += "\n"
+
+                log_info(msginfo)
+
                 rc = generate_pdf(pdfcmd, template, tikzfile,
                                   options.output_file)
+                if rc == 0:
+                    log_info(" done\n")
+
                 if rc == 0 and options.view is True:
                     start_pdfviewer(options.output_file)
                     options.view = False
 
-                previous_time = current_time
         except KeyboardInterrupt:
             remove_tempfile()
             pass
