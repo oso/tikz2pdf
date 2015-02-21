@@ -76,6 +76,7 @@ quiet = False
 verbose = False
 tmpfile = None
 dependencies = {}
+relative_path = ""
 
 def log_error(msg):
     sys.stderr.write(msg)
@@ -152,16 +153,42 @@ def update_dependencies(tmpfile):
     except:
         return
 
+    discarded_files = glob.glob(os.path.splitext(tmpfile.name)[0] + ".*")
+
     dependencies = {}
     for line in f:
         line = line.split()
-        if line[0] == "INPUT":
-            dependencies[line[1]] = os.path.getmtime(line[1])
+        if line[0] != "INPUT":
+            continue
+
+        if os.path.realpath(line[1]) in discarded_files:
+            continue
+
+        dependencies[line[1]] = os.path.getmtime(line[1])
 
     f.close()
-    pass
 
-def generate_pdf(pdfcmd, template, tikzfile, output_file):
+def save_dependencies(tikfile, output_file, dependencies):
+    if len(dependencies) < 2:
+        return
+
+    f = open("%s/.%s.d" % (os.path.dirname(output_file),
+                           os.path.basename(output_file)), 'w+')
+
+    for dep in dependencies.keys():
+        fname = relative_path + os.path.basename(output_file)
+
+        if dep == tikfile:
+            continue
+
+        if dep[0] != os.sep:
+            dep = relative_path + dep
+
+        f.write("%s: %s\n" % (fname, dep))
+
+    f.close()
+
+def generate_pdf(pdfcmd, template, tikzfile, output_file, save_deps):
     global tmpfile
     global verbose
 
@@ -195,6 +222,8 @@ def generate_pdf(pdfcmd, template, tikzfile, output_file):
         return rc
 
     update_dependencies(tmpfile)
+    if save_deps is True:
+        save_dependencies(tikzfile, output_file, dependencies)
 
     tmpfile.close()
 
@@ -226,6 +255,10 @@ if __name__ == "__main__":
     op.add_option("-f", "--file", action = "store",
                   dest = "output_file", default = None,
                   help = "ouput file name")
+    op.add_option("-d", "--depends", action = "store_true",
+                  dest = "save_deps", default = False,
+                  help = "save dependencies in Makefile format into hidden \
+                          file \".filename.d\"")
 
     options, args = op.parse_args()
 
@@ -234,6 +267,10 @@ if __name__ == "__main__":
     if len(args) == 0:
         log_error("No input file specified!\n")
         exit(1)
+
+    relative_path = os.path.dirname(args[0])
+    if relative_path != "":
+        relative_path += os.sep
 
     tikzfile = os.path.realpath(args[0])
     if not os.path.isfile(tikzfile):
@@ -268,7 +305,8 @@ if __name__ == "__main__":
         template = DEFAULT_TEMPLATE
 
     if options.watch is False or options.once is True:
-        rc = generate_pdf(pdfcmd, template, tikzfile, options.output_file)
+        rc = generate_pdf(pdfcmd, template, tikzfile, options.output_file,
+                          options.save_deps)
         if rc == 0 and options.view is True:
             start_pdfviewer(options.output_file)
     else:
@@ -298,7 +336,8 @@ if __name__ == "__main__":
                 log_info(msginfo)
 
                 rc = generate_pdf(pdfcmd, template, tikzfile,
-                                  options.output_file)
+                                  options.output_file,
+                                  options.save_deps)
                 if rc == 0:
                     log_info(" done\n")
 
