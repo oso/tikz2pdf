@@ -67,7 +67,7 @@ DEFAULT_TEMPLATE = r"""\documentclass[a4paper,10pt]{article}
 
 \begin{document}
 
-\input{%s}
+\input{"%s"}
 
 \end{document}
 """
@@ -235,7 +235,7 @@ def generate_pdf(pdfcmd, template, tikzfile, output_file, save_deps):
     return 0
 
 def start_pdfviewer(output_file):
-    subprocess.Popen(DEFAULT_PDFVIEWER_CMD +  " %s" % output_file,
+    subprocess.Popen(DEFAULT_PDFVIEWER_CMD +  " \"%s\"" % output_file,
                      shell = True)
 
 if __name__ == "__main__":
@@ -286,10 +286,10 @@ if __name__ == "__main__":
 
     os.chdir(directory)
 
-    if which('lualatex') is not None:
-        pdfcmd = 'lualatex'
-    elif which('pdflatex') is not None:
+    if which('pdflatex') is not None:
         pdfcmd = 'pdflatex'
+    elif which('lualatex') is not None:
+        pdfcmd = 'lualatex'
     else:
         log_error("Neither 'lualtex' nor 'pdflatex' have been found")
         exit(1)
